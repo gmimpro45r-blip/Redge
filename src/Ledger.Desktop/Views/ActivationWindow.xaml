@@ -1,0 +1,86 @@
+<Window x:Class="Ledger.Desktop.Views.ActivationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Activate Ledger"
+        Width="640" Height="520"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{md:MaterialDesignFont}"
+        TextElement.FontSize="14"
+        md:ThemeAssist.Theme="Light">
+
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Activate Ledger"
+                   Style="{StaticResource MaterialDesignHeadline4TextBlock}" />
+        <TextBlock Grid.Row="1"
+                   Text="Enter the activation key you received with your purchase."
+                   Margin="0,4,0,24"
+                   Style="{StaticResource MaterialDesignBody1TextBlock}"
+                   Opacity="0.7" />
+
+        <TextBlock Grid.Row="2"
+                   Text="Device ID (read-only)"
+                   Style="{StaticResource MaterialDesignBody2TextBlock}"
+                   Opacity="0.7" />
+        <Border Grid.Row="3"
+                Padding="12,8"
+                Margin="0,4,0,16"
+                Background="{DynamicResource MaterialDesignDivider}"
+                CornerRadius="4">
+            <TextBox IsReadOnly="True"
+                     FontFamily="Consolas"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Text="{Binding DeviceId, Mode=OneWay}" />
+        </Border>
+
+        <TextBox Grid.Row="4"
+                 md:HintAssist.Hint="Activation key (paste exactly)"
+                 md:HintAssist.IsFloating="True"
+                 Style="{StaticResource MaterialDesignFilledTextBox}"
+                 Text="{Binding ActivationKey, UpdateSourceTrigger=PropertyChanged}"
+                 AcceptsReturn="False"
+                 MaxLength="4096" />
+
+        <TextBlock Grid.Row="5"
+                   Margin="0,12,0,0"
+                   Text="{Binding ErrorMessage}"
+                   Foreground="#D32F2F"
+                   Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
+
+        <ProgressBar Grid.Row="6"
+                     Margin="0,16,0,0"
+                     VerticalAlignment="Top"
+                     IsIndeterminate="True"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+
+        <StackPanel Grid.Row="7"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Margin="0,16,0,0">
+            <Button Content="COPY DEVICE ID"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Margin="0,0,8,0"
+                    Command="{Binding CopyDeviceIdCommand}" />
+            <Button Content="ACTIVATE"
+                    Style="{StaticResource MaterialDesignRaisedButton}"
+                    IsDefault="True"
+                    Command="{Binding ActivateCommand}" />
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,368 +1,212 @@
-# Professional C# Accounting System — Architecture
+# Redge — Architecture
 
-> **Stack**: .NET 8 WPF · MVVM Toolkit · MaterialDesignInXaml · Supabase (PostgreSQL) · SQLite (offline-first) · n8n (HMAC-SHA256 webhooks) · QuestPDF · LiveCharts2 · ClosedXML · Velopack
+> **Stack**: .NET 8 WPF · MVVM Toolkit · MaterialDesignInXaml · **SQLCipher-encrypted SQLite** · EF Core · **Hardware-locked RSA-signed licensing** · BCrypt local auth · QuestPDF · LiveCharts2 · ClosedXML · **Inno Setup** single-file EXE.
+
+This is a **100 % offline, commercially-resellable** desktop accounting product. No cloud, no telemetry. Every install runs against a single encrypted database file on the customer's machine.
 
 ---
 
-## 1. Solution Layout
+## 1. Solution layout
 
 ```
 Accounting.sln
 │
 ├── src/
-│   ├── Ledger.Core/             ← Pure domain layer  (no I/O)
-│   │   ├── Entities/            ← Account, JournalHeader, JournalLine, ...
-│   │   ├── Enums/               ← AccountType, EntryStatus, FiscalStatus, ...
-│   │   ├── ValueObjects/        ← Money (decimal,Currency), DateRange, ...
-│   │   ├── DomainEvents/        ← JournalEntryPosted, FiscalYearClosed, ...
-│   │   ├── Specifications/      ← Reusable LINQ predicates
-│   │   └── Abstractions/        ← Interfaces: IUnitOfWork, IClock, IUserContext
+│   ├── Ledger.Core/              ← Pure domain layer (no I/O)
+│   │   ├── Entities/             ← Account, JournalHeader/Line, CostCenter, Currency,
+│   │   │                            ExchangeRate, FiscalYear/Period, User, LicenseInfo,
+│   │   │                            AuditLog
+│   │   ├── Enums/                ← AccountType, NormalBalance, EntryStatus, FiscalStatus,
+│   │   │                            UserRole
+│   │   ├── ValueObjects/         ← Money (decimal + currency, 4dp)
+│   │   └── Abstractions/         ← IClock, IUserContext
 │   │
-│   ├── Ledger.Data/              ← Persistence: EF Core + Supabase + SQLite
-│   │   ├── LedgerDbContext.cs    ← EF Core context (used for both SQLite & PG)
+│   ├── Ledger.Shared/            ← Result<T>, Guard, cross-cutting helpers
+│   │
+│   ├── Ledger.Data/              ← EF Core + SQLite + SQLCipher
+│   │   ├── LedgerDbContext.cs
+│   │   ├── Sqlite/               ← SqlCipherInitializer, SqlCipherConnectionFactory
 │   │   ├── Configurations/       ← IEntityTypeConfiguration<T> per entity
-│   │   ├── Migrations/           ← EF Core migrations (SQLite local cache)
-│   │   ├── Supabase/             ← Supabase client wrapper (REST/PostgREST)
-│   │   ├── Sqlite/               ← Local SQLite bootstrap + WAL
-│   │   └── Repositories/        ← AccountRepository, JournalRepository, ...
+│   │   ├── Repositories/         ← AccountRepository, JournalRepository
+│   │   ├── UnitOfWork.cs
+│   │   └── Migrations/           ← (added in M3 — `dotnet ef migrations add InitialCreate`)
 │   │
-│   ├── Ledger.Services/          ← Application services
-│   │   ├── Accounting/           ← AccountingService (post, reverse, close)
-│   │   ├── Reporting/            ← ReportService (trial balance, P&L, BS)
-│   │   ├── Sync/                 ← SyncService (outbox → Supabase)
-│   │   ├── Integration/          ← N8nWebhookClient (HMAC-SHA256)
-│   │   ├── Auth/                 ← AuthService (Supabase JWT)
-│   │   └── Export/               ← PdfExportService, ExcelExportService
+│   ├── Ledger.Services/          ← Application layer (no UI deps)
+│   │   ├── Accounting/           ← AccountingService (draft / post / reverse)
+│   │   ├── Auth/                 ← PasswordHasher (BCrypt), LocalAuthService, UserSession
+│   │   └── Licensing/            ← LicenseValidator, LicenseKeyGenerator, IHardwareIdentifier
 │   │
-│   ├── Ledger.Desktop/           ← WPF host (entry point)
-│   │   ├── App.xaml(.cs)         ← DI bootstrap, theme, culture
-│   │   ├── Views/                ← Window/UserControl XAML
-│   │   ├── ViewModels/           ← MVVM Toolkit [ObservableProperty]
-│   │   ├── Controls/             ← Reusable custom controls
-│   │   ├── Resources/            ← Themes, RTL flow direction, languages
-│   │   ├── Converters/           ← BoolToVisibility, DecimalFormat, ...
-│   │   └── Behaviors/            ← DataGrid balance live validation
-│   │
-│   └── Ledger.Shared/            ← Cross-cutting: Result<T>, Logging, Guards
+│   └── Ledger.Desktop/           ← WPF host (entry point) — net8.0-windows
+│       ├── App.xaml(.cs)         ← DI bootstrap, theme, culture
+│       ├── Views/                ← ActivationWindow, LoginWindow, JournalEntryView, ...
+│       ├── ViewModels/           ← CommunityToolkit.Mvvm
+│       └── Licensing/            ← WmiHardwareIdentifier (Windows WMI)
 │
 ├── tests/
-│   ├── Ledger.Core.Tests/        ← Unit tests (xUnit + FluentAssertions)
-│   ├── Ledger.Services.Tests/    ← Service-level tests (in-memory SQLite)
-│   └── Ledger.Integration.Tests/ ← Supabase + n8n contract tests
+│   ├── Ledger.Core.Tests/        ← Money, JournalHeader, Reversal
+│   └── Ledger.Services.Tests/    ← PasswordHasher, LicenseValidator
 │
-├── db/
-│   └── schema.sql                ← Supabase schema (this repo)
-│
-├── deploy/
-│   ├── velopack/                 ← Velopack release config
-│   └── icons/                    ← App icons, installer assets
-│
-└── .agents/
-    └── skills/                   ← Repo-specific Devin skills
+└── deploy/
+    ├── installer/                ← Inno Setup .iss
+    └── icons/                    ← app.ico, installer banners
 ```
 
-### Why this split?
+**Dependency direction (strict):**
 
-| Layer            | Depends on                | Knows about     |
-|------------------|---------------------------|-----------------|
-| `Ledger.Core`    | nothing                   | domain only     |
-| `Ledger.Data`    | `Core`                    | EF Core, Supabase REST, SQLite |
-| `Ledger.Services`| `Core`, `Data`            | use cases       |
-| `Ledger.Desktop` | `Services`, `Core`        | WPF, MaterialDesign |
-| `Ledger.Shared`  | nothing                   | utilities       |
-
-Core has **zero** dependencies on frameworks — this is what makes the business logic testable and portable (could be re-hosted as a Blazor or Web API later).
-
----
-
-## 2. Key NuGet Packages
-
-| Concern          | Package(s) |
-|------------------|------------|
-| MVVM             | `CommunityToolkit.Mvvm` |
-| UI               | `MaterialDesignThemes`, `MaterialDesignColors` |
-| DI               | `Microsoft.Extensions.DependencyInjection`, `.Hosting` |
-| EF Core (SQLite) | `Microsoft.EntityFrameworkCore.Sqlite`, `.Design` |
-| Supabase client  | `supabase-csharp` (Postgrest + Realtime + Storage + Auth) |
-| Validation       | `FluentValidation` |
-| PDF              | `QuestPDF` |
-| Excel            | `ClosedXML` |
-| Charts           | `LiveChartsCore.SkiaSharpView.WPF` |
-| Logging          | `Serilog`, `Serilog.Sinks.File`, `Serilog.Sinks.Debug` |
-| HTTP             | `Microsoft.Extensions.Http.Polly` (retry + circuit breaker) |
-| Hashing/HMAC     | `System.Security.Cryptography` (built-in) |
-| Packaging        | `Velopack` |
-
----
-
-## 3. Domain Model (Core)
-
-```csharp
-public sealed record Money(decimal Amount, string Currency)
-{
-    public static Money Zero(string c) => new(0m, c);
-    public Money Add(Money o)
-    {
-        if (Currency != o.Currency) throw new InvalidOperationException("currency mismatch");
-        return this with { Amount = decimal.Round(Amount + o.Amount, 4) };
-    }
-    public Money Multiply(decimal rate)
-        => this with { Amount = decimal.Round(Amount * rate, 4) };
-}
-
-public sealed class JournalHeader : Entity
-{
-    public Guid    OrgId         { get; private set; }
-    public string  EntryNo       { get; private set; } = default!;
-    public DateOnly EntryDate    { get; private set; }
-    public string? Description   { get; private set; }
-    public string  Currency      { get; private set; } = "USD";
-    public decimal ExchangeRate  { get; private set; } = 1m;
-    public Guid?   FiscalPeriodId{ get; private set; }
-    public EntryStatus Status    { get; private set; } = EntryStatus.Draft;
-    public Guid?   ReversesId    { get; private set; }
-    public Guid?   ReversedById  { get; private set; }
-    public IReadOnlyList<JournalLine> Lines => _lines;
-
-    private readonly List<JournalLine> _lines = new();
-
-    public void AddLine(JournalLine line) { /* invariants */ }
-
-    public Result Post(IClock clock, Guid userId)
-    {
-        if (_lines.Count == 0) return Result.Fail("EMPTY_ENTRY");
-        var debit  = _lines.Sum(l => l.Debit);
-        var credit = _lines.Sum(l => l.Credit);
-        if (decimal.Round(debit,4) != decimal.Round(credit,4))
-            return Result.Fail($"UNBALANCED: debit={debit} credit={credit}");
-        Status   = EntryStatus.Posted;
-        PostedAt = clock.UtcNow;
-        PostedBy = userId;
-        return Result.Ok();
-    }
-
-    public JournalHeader CreateReversal(IClock clock, Guid userId)
-    {
-        if (Status != EntryStatus.Posted)
-            throw new InvalidOperationException("only posted entries can be reversed");
-        var reversal = new JournalHeader { /* swap debit/credit */ };
-        ReversedById = reversal.Id;
-        Status       = EntryStatus.Reversed;
-        return reversal;
-    }
-}
+```
+Ledger.Desktop  ─►  Ledger.Services  ─►  Ledger.Data  ─►  Ledger.Core  ─►  Ledger.Shared
+                          │                                  ▲
+                          └──────────────────────────────────┘
 ```
 
-Decimal precision: all monetary fields use `decimal` (mapped to `numeric(18,4)`). **No `float` / `double` anywhere in the domain.**
+`Ledger.Core` has **zero** framework or NuGet dependencies; it's pure C#.
 
 ---
 
-## 4. Service Layer
+## 2. Security & licensing
 
-### `AccountingService`
-- `Task<Result<Guid>> CreateDraftAsync(JournalEntryDto)`
-- `Task<Result> PostAsync(Guid headerId)`
-- `Task<Result<Guid>> ReverseAsync(Guid headerId, string reason)`
-- `Task<Result<Guid>> CloseFiscalYearAsync(Guid fiscalYearId, Guid retainedEarningsAccountId)` → calls Supabase RPC `close_fiscal_year`.
+### 2.1 Database encryption at rest (SQLCipher)
 
-### `SyncService` (offline-first)
-1. On every write the repository inserts a row into local **`sync_outbox`**.
-2. A `BackgroundService` polls connectivity (HEAD on `${N8N_DOMAIN}/healthz` + Supabase ping).
-3. When online: drain outbox → Supabase via PostgREST (idempotent upserts keyed on `id`).
-4. Conflict resolution: server-wins for `currencies`, client-wins for `journal_*` drafts, hard-fail (manual) for posted entries.
+- The entire database file is encrypted with **AES-256 CBC + HMAC-SHA256** by **SQLCipher v4** (configured via `PRAGMA cipher_compatibility = 4`).
+- We use `Microsoft.EntityFrameworkCore.Sqlite.Core` paired with `SQLitePCLRaw.bundle_e_sqlcipher` so the same EF Core API transparently encrypts/decrypts.
+- The encryption key is derived from a **machine-bound passphrase** combining:
+  1. The local Windows DPAPI-protected secret stored at `%LOCALAPPDATA%\Redge\db.key` (encrypted with `CurrentUser` scope).
+  2. The hardware device ID.
+- Without the original Windows user profile, the database file cannot be opened — even by copying the file to another PC.
 
-### `IntegrationService` — n8n webhooks (HMAC-SHA256)
+### 2.2 Hardware-locked activation
 
-```csharp
-public sealed class N8nWebhookClient
-{
-    private readonly HttpClient _http;
-    private readonly string _secret;     // injected from config
+The Device ID is `SHA-256( CPU.ProcessorId | BaseBoard.SerialNumber | BIOS.SerialNumber | ComputerSystemProduct.UUID )`, queried via WMI in `WmiHardwareIdentifier`.
 
-    public async Task SendAsync(string path, object payload, CancellationToken ct)
-    {
-        var json      = JsonSerializer.Serialize(payload);
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var signature = Sign($"{timestamp}.{json}", _secret);
+| Property | Source | Why |
+|---|---|---|
+| `Win32_Processor.ProcessorId` | CPU | Survives OS reinstall |
+| `Win32_BaseBoard.SerialNumber` | Motherboard | Survives disk replacement |
+| `Win32_BIOS.SerialNumber` | BIOS | Survives clean install |
+| `Win32_ComputerSystemProduct.UUID` | OEM | Last-resort fingerprint |
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, path)
-        {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-        req.Headers.Add("X-Devin-Timestamp", timestamp);
-        req.Headers.Add("X-Devin-Signature", $"sha256={signature}");
+Some WMI properties are blanked on locked-down corporate machines; `WmiHardwareIdentifier` falls back to `"unknown"` for missing slots so the hash remains stable.
 
-        var res = await _http.SendAsync(req, ct);
-        res.EnsureSuccessStatusCode();
-    }
+### 2.3 License key format
 
-    private static string Sign(string data, string secret)
-    {
-        using var h = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        return Convert.ToHexString(h.ComputeHash(Encoding.UTF8.GetBytes(data))).ToLowerInvariant();
-    }
-}
+```
+<base64url(payload-json)>.<base64url(rsa-2048-pkcs1-sha256-signature)>
 ```
 
-On the n8n side, the workflow's **Webhook node** verifies the signature in a Code node before any downstream action runs. Replay protection: reject if `|now - timestamp| > 300s`.
-
-### `AuthService` (Supabase JWT)
-- Wraps `Supabase.Gotrue.Client`.
-- Stores refresh token encrypted with **DPAPI** (`ProtectedData.Protect`) at `%LOCALAPPDATA%\Ledger\auth.bin`.
-- On startup: silently refresh; if it fails, show login window.
-- All outgoing PostgREST requests include `Authorization: Bearer <jwt>` so RLS policies apply.
-
----
-
-## 5. UI / UX
-
-- **MaterialDesignInXaml** with `BundledTheme` for Dark/Light toggle.
-- **RTL support**: `FlowDirection="RightToLeft"` driven from `CultureService.Current.IsRightToLeft`.
-- Localisation via `.resx` files (`Strings.en.resx`, `Strings.ar.resx`).
-- All numbers formatted with `CultureInfo.GetCultureInfo("ar-EG")` for Arabic UI (Eastern Arabic digits opt-in).
-- DataGrid for journal lines uses a `LiveBalanceBehavior` that recomputes Σdebit/Σcredit on every CellEditEnding and disables the **Post** button until balanced.
-
-### Screens
-1. **Login** — Supabase email/password + "Remember me".
-2. **Dashboard** — KPI tiles + LiveCharts2 (Revenue vs Expense, Cash flow, Top accounts).
-3. **Chart of Accounts** — `TreeView` bound to recursive accounts query.
-4. **Journal Entry** — header card + lines `DataGrid` + balance footer; **Save Draft / Post / Reverse**.
-5. **Trial Balance / P&L / Balance Sheet** — DataGrid + Export buttons.
-6. **Fiscal Year Manager** — list of years, lock/close actions.
-7. **Settings** — currencies, exchange rates, cost centers, n8n endpoint + secret.
-
----
-
-## 6. Configuration & Secrets
-
-`appsettings.json` ships with placeholders only:
+The payload (`LicensePayload`):
 
 ```json
 {
-  "Supabase": {
-    "Url":       "https://YOUR-PROJECT.supabase.co",
-    "AnonKey":   "${SUPABASE_ANON_KEY}"
-  },
-  "N8n": {
-    "Domain":    "${N8N_DOMAIN}",
-    "ApiKey":    "${N8N_API_KEY}",
-    "WebhookSecret": "${N8N_WEBHOOK_SECRET}"
-  }
+  "device_id":  "abc123...",
+  "customer":   "Acme Inc.",
+  "edition":    "Standard",
+  "issued_at":  "2026-05-12T00:00:00Z",
+  "expires_at": "2027-05-12",
+  "reference":  "INV-001"
 }
 ```
 
-At runtime values are sourced from (in order):
-1. `appsettings.{Environment}.json`
-2. Environment variables (`Ledger__Supabase__Url`, etc.)
-3. **DPAPI-encrypted user secrets** at `%LOCALAPPDATA%\Ledger\secrets.bin`.
+- **Vendor side** (`LicenseKeyGenerator`): signs with the private RSA key kept in your vault. Never ships with the app.
+- **App side** (`LicenseValidator`): verifies with the embedded public PEM, then checks `device_id == GetDeviceId()` and `expires_at > today`.
 
-The user never types secrets into XAML — the Settings screen writes through `ISecretStore`.
+Constant-time signature verification is delegated to .NET's `RSA.VerifyData` (PKCS#1 v1.5 + SHA-256).
 
----
+### 2.4 Local authentication
 
-## 7. Sync & Offline-First Strategy
+- Passwords hashed with **BCrypt** (work factor 12). Verified via `BCrypt.Net-Next`.
+- **Account lockout**: 5 failed attempts → 15 min lockout window (configurable).
+- **Roles**: `Admin` (full access incl. user management, license entry, period close), `Accountant` (post entries), `DataEntry` (drafts only), `Viewer` (read-only).
+- Every login / logout / role change / activation goes into the append-only `audit_log` table.
 
-```
-┌───────────────────┐   write   ┌──────────────┐
-│  ViewModel        │──────────▶│  Repository  │
-└───────────────────┘           └──────┬───────┘
-                                       │ same TX
-                                       ▼
-                              ┌──────────────────┐
-                              │ SQLite (local)   │
-                              │   + sync_outbox  │
-                              └──────┬───────────┘
-                                     │ BackgroundService
-                                     ▼
-                              ┌──────────────────┐
-                              │ Supabase (cloud) │
-                              └──────────────────┘
-```
+### 2.5 Threat model
 
-- Every write is local-first → app stays responsive even without internet.
-- Outbox is the source of truth for "what needs to go to the cloud".
-- Posted journal entries can be modified only via a **reversal entry** — the same constraint exists in the DB (triggers) and the domain (`JournalHeader.Post`).
+| Attack | Mitigation |
+|---|---|
+| Stolen DB file | SQLCipher AES-256 + DPAPI machine binding |
+| Pirated license key | RSA-2048 signature + per-machine device binding |
+| Patching the executable to skip activation | Code signing the EXE/installer; tamper detection on `LicenseInfo` row hash (M5) |
+| Brute-force password | BCrypt cost 12 + lockout after 5 attempts |
+| Posted-entry tampering | Domain enforces "no edits after post"; audit log records every action |
 
 ---
 
-## 8. Reporting
+## 3. Domain rules (unchanged by the offline pivot)
 
-| Report          | Source                          | Renderer  | Export |
-|-----------------|---------------------------------|-----------|--------|
-| Trial Balance   | `v_trial_balance`               | DataGrid  | QuestPDF, ClosedXML |
-| Profit & Loss   | `v_trial_balance` filtered      | DataGrid  | QuestPDF, ClosedXML |
-| Balance Sheet   | `v_account_balances_rollup`     | DataGrid  | QuestPDF, ClosedXML |
-| Cash Flow       | `journal_lines` ∩ cash accounts | DataGrid  | QuestPDF |
-| GL by Account   | `journal_lines` by account      | DataGrid  | QuestPDF, ClosedXML |
-| Dashboards      | aggregated views                | LiveCharts2 | PNG snapshot |
-
-QuestPDF documents live under `Ledger.Services/Export/Pdf/Documents/*.cs` — one class per report, each implementing `IDocument`.
+- All money: `decimal` in C# / `NUMERIC(18,4)` in SQLite. Zero floats.
+- Exchange rates: `NUMERIC(18,8)`.
+- `JournalHeader.Post(IClock, userId)` enforces `Σdebit == Σcredit` (4dp rounded) and a non-empty `Lines`; status flips Draft → Posted; PostedAt / PostedBy captured.
+- Posted entries are **immutable**. `JournalHeader.CreateReversal(...)` creates an inverse entry, swaps debit/credit on each line, marks original as `Reversed`.
+- Fiscal periods: `FiscalPeriod.Lock()` prevents further posting; `FiscalYear.Close()` rolls P&L into Retained Earnings (added in M3).
+- Cost centers: optional per line.
 
 ---
 
-## 9. Security Checklist
+## 4. Persistence
 
-- [x] All financial values stored as `numeric(18,4)` / `decimal`.
-- [x] Hard deletes blocked by trigger on `journal_headers`.
-- [x] Σdebit = Σcredit enforced server-side **and** client-side.
-- [x] Period lock enforced server-side.
-- [x] Supabase RLS: every business table is restricted by `is_org_member(org_id)`.
-- [x] JWT refresh token encrypted with DPAPI on disk.
-- [x] n8n webhooks signed with HMAC-SHA256 + 5-minute replay window.
-- [x] Audit log is append-only (no UPDATE/DELETE policies).
-- [x] No secrets in source control — placeholders only in `appsettings.json`.
+- One `LedgerDbContext` instance per logical operation. `UnitOfWork` wraps EF Core change tracking and transactions.
+- Configurations are split per entity (one `IEntityTypeConfiguration<T>` per file under `Configurations/`).
+- Initial migration is added in M3 via `dotnet ef migrations add InitialCreate --project src/Ledger.Data --startup-project src/Ledger.Desktop`.
+- On first launch the app calls `Database.MigrateAsync()` after the SQLCipher key is applied.
 
 ---
 
-## 10. Deployment (Velopack — Single-File EXE + auto-update)
+## 5. UI
 
-```bash
-# 1. Publish self-contained, single-file, trimmed
-dotnet publish src/Ledger.Desktop/Ledger.Desktop.csproj \
-    -c Release -r win-x64 \
-    --self-contained true \
-    -p:PublishSingleFile=true \
-    -p:IncludeAllContentForSelfExtract=true \
-    -p:EnableCompressionInSingleFile=true
+- **WPF + MaterialDesignInXaml 5** with custom `BundledTheme` for Light/Dark.
+- **MVVM Toolkit** for `[ObservableProperty]` / `[RelayCommand]`.
+- **RTL** via `FlowDirection="{Binding FlowDirection}"` on each view's root.
+- **White-label**: brand colour, logo, app name are read from `appsettings.json` and `LEDGER_APP_NAME` env var.
 
-# 2. Pack as a Velopack release
-dotnet tool install --global vpk
+Critical screens (M3):
 
-vpk pack \
-    --packId      Ledger.Desktop \
-    --packVersion 1.0.0 \
-    --packDir     src/Ledger.Desktop/bin/Release/net8.0-windows/win-x64/publish \
-    --mainExe     Ledger.Desktop.exe \
-    --icon        deploy/icons/app.ico
+1. **Activation** — shown until `LicenseInfo` row exists & is valid (`ActivationWindow.xaml` already scaffolded).
+2. **Login** — username + password, BCrypt verify.
+3. **Dashboard** — KPIs, LiveCharts2 revenue/expense chart.
+4. **Chart of Accounts** — TreeView with parent-child rollup.
+5. **Journal Entry** — DataGrid with live debit/credit totals, balance indicator, post / reverse buttons (`JournalEntryView.xaml` scaffolded).
+6. **Reports** — TB, P&L, BS via QuestPDF.
+7. **Settings** — users (Admin only), license info, theme, language.
 
-# 3. Upload the produced ./Releases/* to your update channel
-#    (S3, GitHub Releases, Supabase Storage, ...)
+---
+
+## 6. Deployment
+
+### Single-file EXE
+
+```powershell
+dotnet publish src\Ledger.Desktop\Ledger.Desktop.csproj `
+    -c Release -r win-x64 --self-contained true
 ```
 
-Auto-update on launch:
+Project file already sets `PublishSingleFile=true`, `IncludeAllContentForSelfExtract=true`, `EnableCompressionInSingleFile=true`.
 
-```csharp
-var mgr = new UpdateManager("https://updates.example.com/ledger");
-var info = await mgr.CheckForUpdatesAsync();
-if (info != null) {
-    await mgr.DownloadUpdatesAsync(info);
-    mgr.ApplyUpdatesAndRestart();
-}
+### Inno Setup installer
+
+```powershell
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" deploy\installer\installer.iss
+```
+
+The script (`deploy/installer/installer.iss`) creates `Output\Setup-Ledger-0.1.0.exe` with multi-language support (English + Arabic) and optional desktop / start-menu shortcuts.
+
+### Code signing
+
+Always sign the resulting Setup.exe before distribution:
+
+```powershell
+signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a Output\Setup-Ledger-0.1.0.exe
 ```
 
 ---
 
-## 11. Milestones (proposed)
+## 7. Roadmap
 
-| # | Milestone                                 | Deliverable                                |
-|---|--------------------------------------------|--------------------------------------------|
-| 1 | Schema + Architecture                      | **this file** + `schema.sql`               |
-| 2 | Solution scaffold + Core models            | empty WPF window + entities + unit tests   |
-| 3 | Data layer + Supabase + SQLite             | EF Core context, repos, migrations         |
-| 4 | Services + Sync engine                     | AccountingService, SyncService             |
-| 5 | UI screens (Login, COA, Journal)           | usable end-to-end happy path               |
-| 6 | Reports + Exports                          | Trial Balance / P&L / BS + PDF / Excel     |
-| 7 | n8n integration + signed webhooks          | working webhook → n8n workflow             |
-| 8 | Velopack packaging + auto-update           | single-file EXE                            |
-
-I'll wait for your go-ahead on solution name + repo location before scaffolding step 2.
+| Milestone | Scope | Status |
+|---|---|---|
+| **M1** | Architecture + schema design | done |
+| **M2** | Solution scaffold + domain + encrypted data layer + licensing + local auth (29 tests passing) | **done** |
+| M3 | EF Core migrations + DI bootstrap + Activation / Login flows wired up | next |
+| M4 | UI: Dashboard, COA, Journal Entry (full MVVM, RTL, theming) | |
+| M5 | Reports: TB, P&L, BS via QuestPDF + Excel export | |
+| M6 | White-label config + first-run wizard + sample data + license tamper detection | |
+| M7 | Vendor key-issuance CLI (uses `LicenseKeyGenerator`) + code-signing pipeline | |
+| M8 | QA pass + release Setup.exe | |

@@ -11,4 +11,9 @@
     <ProjectReference Include="..\Ledger.Shared\Ledger.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- BCrypt for local password hashing. Cross-platform, used by tests on Linux CI. -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+  </ItemGroup>
+
 </Project>

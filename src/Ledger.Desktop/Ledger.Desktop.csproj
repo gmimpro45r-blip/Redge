@@ -7,15 +7,31 @@
     <AssemblyName>Ledger.Desktop</AssemblyName>
     <UseWPF>true</UseWPF>
     <ApplicationIcon Condition="Exists('..\..\deploy\icons\app.ico')">..\..\deploy\icons\app.ico</ApplicationIcon>
-    <!-- WPF builds only on Windows. CI guards this project on the windows-latest runner. -->
+    <!-- Single-file publish properties (used by `dotnet publish`). -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Ledger.Core\Ledger.Core.csproj" />
+    <ProjectReference Include="..\Ledger.Data\Ledger.Data.csproj" />
     <ProjectReference Include="..\Ledger.Services\Ledger.Services.csproj" />
     <ProjectReference Include="..\Ledger.Shared\Ledger.Shared.csproj" />
   </ItemGroup>
 
-  <!-- NuGet packages (MaterialDesign, MVVM Toolkit, etc.) are added in milestone 5. -->
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <!-- WMI is Windows-only; safe here because the project targets net8.0-windows. -->
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
 
 </Project>

@@ -10,7 +10,19 @@
     <ProjectReference Include="..\Ledger.Shared\Ledger.Shared.csproj" />
   </ItemGroup>
 
-  <!-- Package references will be added in milestone 3 (EF Core, Supabase). -->
-  <!-- Kept lean for now so CI can run without network during restore. -->
+  <ItemGroup>
+    <!--
+      EF Core SQLite, paired with the SQLCipher-enabled native bundle.
+      We use 'Sqlite.Core' (no native binaries) and add 'bundle_e_sqlcipher' explicitly
+      so the same SQLite provider transparently encrypts the database file at rest.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.10" />
+  </ItemGroup>
 
 </Project>
