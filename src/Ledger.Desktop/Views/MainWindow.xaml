@@ -2,6 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:vm="clr-namespace:Ledger.Desktop.ViewModels"
+        xmlns:views="clr-namespace:Ledger.Desktop.Views"
         Title="Ledger Accounting"
         Width="1280" Height="800"
         WindowStartupLocation="CenterScreen"
@@ -9,11 +11,85 @@
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="{md:MaterialDesignFont}"
         TextElement.FontSize="14">
-    <Grid>
-        <TextBlock Text="Ledger — M2 scaffold ready. Activation, Login &amp; Dashboard land in M3."
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="20"
-                   Opacity="0.6" />
-    </Grid>
+
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ChartOfAccountsViewModel}">
+            <views:ChartOfAccountsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:JournalEntryViewModel}">
+            <views:JournalEntryView />
+        </DataTemplate>
+    </Window.Resources>
+
+    <md:DialogHost Identifier="RootDialog">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Side navigation -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource MaterialDesignToolBarBackground}">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top"
+                            Padding="16,20"
+                            Background="{DynamicResource PrimaryHueMidBrush}">
+                        <StackPanel>
+                            <TextBlock Text="Ledger"
+                                       Foreground="White"
+                                       FontSize="22"
+                                       FontWeight="Light" />
+                            <TextBlock Text="{Binding Username}"
+                                       Foreground="White"
+                                       Opacity="0.85"
+                                       FontSize="13"
+                                       Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding Role}"
+                                       Foreground="White"
+                                       Opacity="0.7"
+                                       FontSize="11"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Margin="0,16,0,0">
+                        <Button Content="Dashboard"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                HorizontalContentAlignment="Left"
+                                Padding="20,12"
+                                Command="{Binding ShowDashboardCommand}" />
+                        <Button Content="Chart of Accounts"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                HorizontalContentAlignment="Left"
+                                Padding="20,12"
+                                Command="{Binding ShowAccountsCommand}" />
+                        <Button Content="Journal Entry"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                HorizontalContentAlignment="Left"
+                                Padding="20,12"
+                                Command="{Binding ShowJournalCommand}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Content area -->
+            <DockPanel Grid.Column="1">
+                <Border DockPanel.Dock="Top"
+                        Padding="24,16"
+                        Background="{DynamicResource MaterialDesignPaper}"
+                        BorderBrush="{DynamicResource MaterialDesignDivider}"
+                        BorderThickness="0,0,0,1">
+                    <TextBlock Text="{Binding CurrentTitle}"
+                               FontSize="20"
+                               FontWeight="Medium" />
+                </Border>
+
+                <ContentControl Content="{Binding CurrentView}" />
+            </DockPanel>
+        </Grid>
+    </md:DialogHost>
 </Window>

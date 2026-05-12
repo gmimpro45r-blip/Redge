@@ -3,18 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              Background="{DynamicResource MaterialDesignPaper}"
-             FontFamily="{md:MaterialDesignFont}"
-             FlowDirection="{Binding FlowDirection}">
+             FontFamily="{md:MaterialDesignFont}">
 
-    <Grid Margin="16">
+    <Grid Margin="24">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />   <!-- Header card -->
-            <RowDefinition Height="*"   />    <!-- Lines grid  -->
-            <RowDefinition Height="Auto" />   <!-- Totals      -->
-            <RowDefinition Height="Auto" />   <!-- Action bar  -->
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header: entry no, date, currency, FX rate, description -->
         <md:Card Grid.Row="0" Padding="16" Margin="0,0,0,12" UniformCornerRadius="8">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -29,84 +28,140 @@
                 </Grid.RowDefinitions>
 
                 <TextBox Grid.Column="0" Grid.Row="0"
-                         md:HintAssist.Hint="Entry No"  md:HintAssist.IsFloating="True"
-                         Text="{Binding EntryNo, Mode=OneWay}" IsReadOnly="True" />
+                         md:HintAssist.Hint="Entry No"
+                         md:HintAssist.IsFloating="True"
+                         Style="{StaticResource MaterialDesignFilledTextBox}"
+                         Text="{Binding EntryNo, Mode=OneWay}"
+                         IsReadOnly="True" />
+
                 <DatePicker Grid.Column="1" Grid.Row="0"
-                            md:HintAssist.Hint="Entry Date" md:HintAssist.IsFloating="True"
-                            SelectedDate="{Binding EntryDate}" Margin="8,0,0,0" />
+                            md:HintAssist.Hint="Entry Date"
+                            md:HintAssist.IsFloating="True"
+                            Style="{StaticResource MaterialDesignFilledDatePicker}"
+                            SelectedDate="{Binding EntryDate}"
+                            Margin="8,0,0,0" />
+
                 <ComboBox Grid.Column="2" Grid.Row="0"
-                          md:HintAssist.Hint="Currency" md:HintAssist.IsFloating="True"
+                          md:HintAssist.Hint="Currency"
+                          md:HintAssist.IsFloating="True"
+                          Style="{StaticResource MaterialDesignFilledComboBox}"
                           ItemsSource="{Binding Currencies}"
                           SelectedValue="{Binding Currency}"
                           Margin="8,0,0,0" />
+
                 <TextBox Grid.Column="3" Grid.Row="0"
-                         md:HintAssist.Hint="FX Rate" md:HintAssist.IsFloating="True"
-                         Text="{Binding ExchangeRate}"
+                         md:HintAssist.Hint="FX Rate"
+                         md:HintAssist.IsFloating="True"
+                         Style="{StaticResource MaterialDesignFilledTextBox}"
+                         Text="{Binding ExchangeRate, StringFormat=N4}"
                          Margin="8,0,0,0" />
 
                 <TextBox Grid.ColumnSpan="4" Grid.Row="1"
                          md:HintAssist.Hint="Description"
                          md:HintAssist.IsFloating="True"
+                         Style="{StaticResource MaterialDesignFilledTextBox}"
                          Margin="0,16,0,0"
-                         Text="{Binding Description}" />
+                         Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
         </md:Card>
 
-        <!-- Lines DataGrid -->
         <DataGrid Grid.Row="1"
                   ItemsSource="{Binding Lines}"
                   AutoGenerateColumns="False"
-                  CanUserAddRows="True"
-                  CanUserDeleteRows="True"
-                  HeadersVisibility="Column">
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  md:DataGridAssist.CellPadding="8">
+            <DataGrid.Resources>
+                <CollectionViewSource x:Key="AccountsSource"
+                                      Source="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.Accounts}" />
+            </DataGrid.Resources>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="#" Binding="{Binding LineNo, Mode=OneWay}" IsReadOnly="True" Width="40" />
-                <DataGridComboBoxColumn Header="Account"
-                                        SelectedValueBinding="{Binding AccountId}"
-                                        SelectedValuePath="Id"
-                                        DisplayMemberPath="Code"
-                                        Width="*" />
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*" />
-                <DataGridTextColumn Header="Debit"  Binding="{Binding Debit,  StringFormat=N4}" Width="120" />
-                <DataGridTextColumn Header="Credit" Binding="{Binding Credit, StringFormat=N4}" Width="120" />
-                <DataGridComboBoxColumn Header="Cost Center"
-                                        SelectedValueBinding="{Binding CostCenterId}"
-                                        SelectedValuePath="Id"
-                                        DisplayMemberPath="Code"
-                                        Width="160" />
+                <DataGridTextColumn Header="#"
+                                    Binding="{Binding LineNo, Mode=OneWay}"
+                                    IsReadOnly="True"
+                                    Width="40" />
+                <DataGridTemplateColumn Header="Account" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox SelectedValue="{Binding AccountId, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="Id"
+                                      DisplayMemberPath="Code"
+                                      ItemsSource="{Binding Source={StaticResource AccountsSource}}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Description"
+                                    Binding="{Binding Description}"
+                                    Width="2*" />
+                <DataGridTextColumn Header="Debit"
+                                    Binding="{Binding Debit, StringFormat=N4, UpdateSourceTrigger=PropertyChanged}"
+                                    Width="120" />
+                <DataGridTextColumn Header="Credit"
+                                    Binding="{Binding Credit, StringFormat=N4, UpdateSourceTrigger=PropertyChanged}"
+                                    Width="120" />
+                <DataGridTemplateColumn Header="" Width="40">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource MaterialDesignIconButton}"
+                                    Content="✕"
+                                    Width="32" Height="32"
+                                    Padding="0"
+                                    Command="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=DataContext.RemoveLineCommand}"
+                                    CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Totals row -->
-        <Border Grid.Row="2" Padding="12,8" Margin="0,8,0,0"
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0">
+            <Button Content="+ ADD LINE"
+                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                    Command="{Binding AddLineCommand}" />
+        </StackPanel>
+
+        <Border Grid.Row="3" Padding="12,8" Margin="0,8,0,0"
                 Background="{DynamicResource MaterialDesignDivider}"
                 CornerRadius="4">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <TextBlock Text="Total Debit:"  Margin="0,0,8,0"  Style="{StaticResource MaterialDesignBody2TextBlock}" />
-                <TextBlock Text="{Binding TotalDebit,  StringFormat=N4}" Margin="0,0,24,0" FontFamily="Consolas" />
-                <TextBlock Text="Total Credit:" Margin="0,0,8,0" Style="{StaticResource MaterialDesignBody2TextBlock}" />
+                <TextBlock Text="Total Debit:" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding TotalDebit, StringFormat=N4}" Margin="0,0,24,0" FontFamily="Consolas" />
+                <TextBlock Text="Total Credit:" Margin="0,0,8,0" />
                 <TextBlock Text="{Binding TotalCredit, StringFormat=N4}" Margin="0,0,24,0" FontFamily="Consolas" />
-                <TextBlock Text="Status:"      Margin="0,0,8,0" Style="{StaticResource MaterialDesignBody2TextBlock}" />
+                <TextBlock Text="Status:" Margin="0,0,8,0" />
                 <TextBlock Text="{Binding BalanceStatus}" FontWeight="Bold"
                            Foreground="{Binding BalanceStatusBrush}" />
             </StackPanel>
         </Border>
 
-        <!-- Action bar -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="SAVE DRAFT"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    Margin="0,0,8,0"
-                    Command="{Binding SaveDraftCommand}" />
-            <Button Content="POST"
-                    Style="{StaticResource MaterialDesignRaisedButton}"
-                    IsEnabled="{Binding CanPost}"
-                    Command="{Binding PostCommand}" />
-            <Button Content="REVERSE"
-                    Style="{StaticResource MaterialDesignFlatButton}"
-                    Margin="8,0,0,0"
-                    Visibility="{Binding CanReverse, Converter={StaticResource BoolToVis}}"
-                    Command="{Binding ReverseCommand}" />
-        </StackPanel>
+        <Grid Grid.Row="4" Margin="0,12,0,0">
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Foreground="#388E3C"
+                       FontWeight="Medium"
+                       Text="{Binding StatusMessage}" />
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Center"
+                       Foreground="#D32F2F"
+                       TextWrapping="Wrap"
+                       Text="{Binding ErrorMessage}"
+                       Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="NEW"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Margin="0,0,8,0"
+                        Command="{Binding NewEntryCommand}" />
+                <Button Content="SAVE DRAFT"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Margin="0,0,8,0"
+                        Command="{Binding SaveDraftCommand}" />
+                <Button Content="POST"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        IsEnabled="{Binding CanPost}"
+                        Command="{Binding PostCommand}" />
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

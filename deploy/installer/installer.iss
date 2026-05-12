@@ -18,6 +18,15 @@
 #define MyAppExeName      "Ledger.Desktop.exe"
 #define MyAppId           "{{B2E7B0F1-2B6A-4D45-AA00-LEDGER0000001}}"
 
+; SourceDir defaults to the local publish output but can be overridden:
+;   ISCC.exe /DSourceDir="C:\path\to\publish" installer.iss
+#ifndef SourceDir
+#define SourceDir "..\..\src\Ledger.Desktop\bin\Release\net8.0-windows\win-x64\publish"
+#endif
+#ifndef OutDir
+#define OutDir "Output"
+#endif
+
 [Setup]
 AppId={#MyAppId}
 AppName={#MyAppName}
@@ -32,7 +41,8 @@ DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 PrivilegesRequired=admin
 OutputBaseFilename=Setup-{#MyAppShortName}-{#MyAppVersion}
-SetupIconFile=..\icons\app.ico
+OutputDir={#OutDir}
+; SetupIconFile=..\icons\app.ico
 Compression=lzma2/ultra
 SolidCompression=yes
 WizardStyle=modern
@@ -51,8 +61,9 @@ Name: "startmenuicon"; Description: "Create a Start Menu shortcut"; GroupDescrip
 [Files]
 ; Source path is relative to this .iss file's location (deploy\installer\).
 ; The publish folder must already exist (build the app first — see header).
-Source: "..\..\src\Ledger.Desktop\bin\Release\net8.0-windows\win-x64\publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\src\Ledger.Desktop\bin\Release\net8.0-windows\win-x64\publish\*.dll";          DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#SourceDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\*.dll";          DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#SourceDir}\*.pdb";          DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\{#MyAppName}";              Filename: "{app}\{#MyAppExeName}"

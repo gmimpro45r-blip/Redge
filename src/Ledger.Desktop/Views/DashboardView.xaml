@@ -1,0 +1,49 @@
+<UserControl x:Class="Ledger.Desktop.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Grid Margin="32">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="Overview"
+                   FontSize="24"
+                   FontWeight="Light"
+                   Margin="0,0,0,16" />
+
+        <ItemsControl Grid.Row="1">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <md:Card Margin="0,0,16,16" Padding="24" Width="240">
+                <StackPanel>
+                    <TextBlock Text="Accounts" Opacity="0.7" />
+                    <TextBlock Text="{Binding AccountCount}" FontSize="40" FontWeight="Light" />
+                </StackPanel>
+            </md:Card>
+            <md:Card Margin="0,0,16,16" Padding="24" Width="240">
+                <StackPanel>
+                    <TextBlock Text="Journal entries" Opacity="0.7" />
+                    <TextBlock Text="{Binding JournalCount}" FontSize="40" FontWeight="Light" />
+                </StackPanel>
+            </md:Card>
+            <md:Card Margin="0,0,16,16" Padding="24" Width="240">
+                <StackPanel>
+                    <TextBlock Text="Posted entries" Opacity="0.7" />
+                    <TextBlock Text="{Binding PostedCount}" FontSize="40" FontWeight="Light" />
+                </StackPanel>
+            </md:Card>
+            <md:Card Margin="0,0,16,16" Padding="24" Width="240">
+                <StackPanel>
+                    <TextBlock Text="Users" Opacity="0.7" />
+                    <TextBlock Text="{Binding UserCount}" FontSize="40" FontWeight="Light" />
+                </StackPanel>
+            </md:Card>
+        </ItemsControl>
+    </Grid>
+</UserControl>

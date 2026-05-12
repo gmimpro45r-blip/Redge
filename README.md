@@ -148,7 +148,9 @@ signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a Output\
 GitHub Actions runs on every PR:
 
 - `lint-libs` — restore + build + test of all class libraries on `ubuntu-latest`.
-- `build-desktop` — builds `Ledger.Desktop` on `windows-latest`.
+- `build-desktop` — builds `Ledger.Desktop` on `windows-latest`, publishes a self-contained single-file EXE, builds a `Setup-Ledger-x.y.z.exe` via Inno Setup, and uploads everything as workflow artifacts.
+
+Download the artifacts (`Setup-Ledger-win-x64`, `Ledger.Desktop-win-x64`, `Ledger.Vendor-win-x64`) from the GitHub Actions run page after CI succeeds.
 
 See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
@@ -156,15 +158,15 @@ See [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
 ## Project status
 
-This is **milestone 2 of 8** — solution scaffold, domain layer, encrypted data layer, licensing service, local auth. Tests: **29 passing (15 Core + 14 Services)**.
+This is **milestone 3 of 8** — full startup orchestration, Activation + First-Run + Login + Shell wired up, Dashboard + Chart of Accounts + Journal Entry screens functional. Tests: **29 passing (15 Core + 14 Services)**.
 
 - [x] **M1** Architecture + schema design
 - [x] **M2** Solution scaffold + domain layer + data layer (EF Core + SQLCipher) + licensing + local auth
-- [ ] **M3** UI screens (Activation, Login, Dashboard, Chart of Accounts, Journal Entry) with RTL + Dark/Light
+- [x] **M3** UI screens (Activation, FirstRun, Login, Dashboard, Chart of Accounts, Journal Entry), DI bootstrap, EF Core migrations, vendor CLI, CI publishes signed-ready `Setup.exe`
 - [ ] **M4** Reports + Exports (QuestPDF, ClosedXML, LiveCharts2)
-- [ ] **M5** White-label theming + first-run wizard + sample data
+- [ ] **M5** White-label theming + RTL polish + Dark/Light toggle + sample data
 - [ ] **M6** Inno Setup hardening + code-signing pipeline + auto-update story
-- [ ] **M7** Vendor key-issuance CLI tool
+- [ ] **M7** Multi-currency FX revaluation + fiscal year close UI
 - [ ] **M8** QA pass + release
 
 ---

@@ -25,6 +25,7 @@ jobs:
           dotnet restore src/Ledger.Shared/Ledger.Shared.csproj
           dotnet restore src/Ledger.Data/Ledger.Data.csproj
           dotnet restore src/Ledger.Services/Ledger.Services.csproj
+          dotnet restore tools/Ledger.Vendor/Ledger.Vendor.csproj
           dotnet restore tests/Ledger.Core.Tests/Ledger.Core.Tests.csproj
           dotnet restore tests/Ledger.Services.Tests/Ledger.Services.Tests.csproj
 
@@ -34,6 +35,7 @@ jobs:
           dotnet build src/Ledger.Shared/Ledger.Shared.csproj         --no-restore -c Release
           dotnet build src/Ledger.Data/Ledger.Data.csproj             --no-restore -c Release
           dotnet build src/Ledger.Services/Ledger.Services.csproj     --no-restore -c Release
+          dotnet build tools/Ledger.Vendor/Ledger.Vendor.csproj       --no-restore -c Release
           dotnet build tests/Ledger.Core.Tests/Ledger.Core.Tests.csproj         --no-restore -c Release
           dotnet build tests/Ledger.Services.Tests/Ledger.Services.Tests.csproj --no-restore -c Release
 
@@ -63,7 +65,64 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore
-        run: dotnet restore src/Ledger.Desktop/Ledger.Desktop.csproj
+        run: |
+          dotnet restore src/Ledger.Desktop/Ledger.Desktop.csproj
+          dotnet restore tools/Ledger.Vendor/Ledger.Vendor.csproj
 
       - name: Build
         run: dotnet build src/Ledger.Desktop/Ledger.Desktop.csproj --no-restore -c Release
+
+      - name: Publish self-contained single-file (Ledger.Desktop)
+        run: >
+          dotnet publish src/Ledger.Desktop/Ledger.Desktop.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish/desktop
+
+      - name: Publish vendor licensing tool (Ledger.Vendor)
+        run: >
+          dotnet publish tools/Ledger.Vendor/Ledger.Vendor.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -o publish/vendor
+
+      - name: Upload Ledger.Desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ledger.Desktop-win-x64
+          path: publish/desktop/**
+          if-no-files-found: error
+
+      - name: Upload Ledger.Vendor artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ledger.Vendor-win-x64
+          path: publish/vendor/**
+          if-no-files-found: error
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            Write-Host "Installing Inno Setup 6 via Chocolatey"
+            choco install innosetup --no-progress -y
+          }
+          $publishDir = (Resolve-Path 'publish/desktop').Path
+          $outDir = (Resolve-Path -ErrorAction SilentlyContinue 'publish/installer')
+          if (-not $outDir) { New-Item -ItemType Directory -Path 'publish/installer' | Out-Null }
+          $outDir = (Resolve-Path 'publish/installer').Path
+          & $iscc "/DSourceDir=$publishDir" "/DOutDir=$outDir" deploy/installer/installer.iss
+
+      - name: Upload Setup.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Setup-Ledger-win-x64
+          path: publish/installer/**
+          if-no-files-found: error

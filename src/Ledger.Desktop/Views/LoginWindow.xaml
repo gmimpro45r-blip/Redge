@@ -1,16 +1,15 @@
-<Window x:Class="Ledger.Desktop.Views.ActivationWindow"
+<Window x:Class="Ledger.Desktop.Views.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-        Title="Activate Ledger"
-        Width="640" Height="520"
+        Title="Ledger — Sign in"
+        Width="440" Height="440"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         Background="{DynamicResource MaterialDesignPaper}"
         FontFamily="{md:MaterialDesignFont}"
-        TextElement.FontSize="14"
-        md:ThemeAssist.Theme="Light">
+        TextElement.FontSize="14">
 
     <Grid Margin="32">
         <Grid.RowDefinitions>
@@ -25,47 +24,41 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0"
-                   Text="Activate Ledger"
+                   Text="Sign in"
                    Style="{StaticResource MaterialDesignHeadline4TextBlock}" />
         <TextBlock Grid.Row="1"
-                   Text="Enter the activation key you received with your purchase."
+                   Text="Use the credentials of any registered user."
                    Margin="0,4,0,24"
-                   Style="{StaticResource MaterialDesignBody1TextBlock}"
                    Opacity="0.7" />
 
-        <TextBlock Grid.Row="2"
-                   Text="Device ID (read-only)"
-                   Style="{StaticResource MaterialDesignBody2TextBlock}"
-                   Opacity="0.7" />
-        <Border Grid.Row="3"
-                Padding="12,8"
-                Margin="0,4,0,16"
-                Background="{DynamicResource MaterialDesignDivider}"
-                CornerRadius="4">
-            <TextBox IsReadOnly="True"
-                     FontFamily="Consolas"
-                     Background="Transparent"
-                     BorderThickness="0"
-                     Text="{Binding DeviceId, Mode=OneWay}" />
-        </Border>
-
-        <TextBox Grid.Row="4"
-                 md:HintAssist.Hint="Activation key (paste exactly)"
+        <TextBox Grid.Row="2"
+                 md:HintAssist.Hint="Username"
                  md:HintAssist.IsFloating="True"
                  Style="{StaticResource MaterialDesignFilledTextBox}"
-                 Text="{Binding ActivationKey, UpdateSourceTrigger=PropertyChanged}"
-                 AcceptsReturn="False"
-                 MaxLength="4096" />
+                 Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                 MaxLength="64"
+                 Margin="0,0,0,12" />
 
-        <TextBlock Grid.Row="5"
-                   Margin="0,12,0,0"
+        <PasswordBox Grid.Row="3"
+                     md:HintAssist.Hint="Password"
+                     md:HintAssist.IsFloating="True"
+                     Style="{StaticResource MaterialDesignFilledPasswordBox}"
+                     md:TextFieldAssist.HasClearButton="True"
+                     x:Name="PasswordBox"
+                     PasswordChanged="PasswordBox_PasswordChanged"
+                     MaxLength="256"
+                     Margin="0,0,0,16" />
+
+        <TextBlock Grid.Row="4"
                    Text="{Binding ErrorMessage}"
                    Foreground="#D32F2F"
+                   TextWrapping="Wrap"
+                   Margin="0,8,0,0"
                    Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
 
-        <ProgressBar Grid.Row="6"
-                     Margin="0,16,0,0"
+        <ProgressBar Grid.Row="5"
                      VerticalAlignment="Top"
+                     Margin="0,16,0,0"
                      IsIndeterminate="True"
                      Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
 
@@ -73,15 +66,10 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
-            <Button Content="COPY DEVICE ID"
-                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                    Margin="0,0,8,0"
-                    Command="{Binding CopyDeviceIdCommand}" />
-            <Button x:Name="ActivateButton"
-                    Content="ACTIVATE"
+            <Button Content="SIGN IN"
                     Style="{StaticResource MaterialDesignRaisedButton}"
                     IsDefault="True"
-                    Command="{Binding ActivateCommand}"
+                    Command="{Binding SignInCommand}"
                     CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}" />
         </StackPanel>
     </Grid>

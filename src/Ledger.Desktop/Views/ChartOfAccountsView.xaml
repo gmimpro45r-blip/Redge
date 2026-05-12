@@ -1,0 +1,100 @@
+<UserControl x:Class="Ledger.Desktop.Views.ChartOfAccountsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Grid Margin="32">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Account list -->
+        <md:Card Grid.Column="0" Padding="0" Margin="0,0,16,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top"
+                           Text="Accounts"
+                           FontSize="18"
+                           Padding="16"
+                           Background="{DynamicResource MaterialDesignDivider}" />
+                <DataGrid ItemsSource="{Binding Accounts}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="True"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          md:DataGridAssist.CellPadding="12,8">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="120" />
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding AccountType}" Width="100" />
+                        <DataGridTextColumn Header="Balance" Binding="{Binding NormalBalance}" Width="80" />
+                        <DataGridTextColumn Header="Currency" Binding="{Binding Currency}" Width="80" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </md:Card>
+
+        <!-- New account form -->
+        <md:Card Grid.Column="1" Padding="20">
+            <StackPanel>
+                <TextBlock Text="New account"
+                           FontSize="18"
+                           Margin="0,0,0,16" />
+
+                <TextBox md:HintAssist.Hint="Code (e.g. 1010)"
+                         md:HintAssist.IsFloating="True"
+                         Style="{StaticResource MaterialDesignFilledTextBox}"
+                         Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}"
+                         MaxLength="32"
+                         Margin="0,0,0,12" />
+
+                <TextBox md:HintAssist.Hint="Name"
+                         md:HintAssist.IsFloating="True"
+                         Style="{StaticResource MaterialDesignFilledTextBox}"
+                         Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                         MaxLength="200"
+                         Margin="0,0,0,12" />
+
+                <TextBox md:HintAssist.Hint="Name (Arabic)"
+                         md:HintAssist.IsFloating="True"
+                         Style="{StaticResource MaterialDesignFilledTextBox}"
+                         FlowDirection="RightToLeft"
+                         Text="{Binding NameAr, UpdateSourceTrigger=PropertyChanged}"
+                         MaxLength="200"
+                         Margin="0,0,0,12" />
+
+                <ComboBox md:HintAssist.Hint="Account type"
+                          md:HintAssist.IsFloating="True"
+                          Style="{StaticResource MaterialDesignFilledComboBox}"
+                          ItemsSource="{Binding AccountTypes}"
+                          SelectedItem="{Binding AccountType}"
+                          Margin="0,0,0,12" />
+
+                <ComboBox md:HintAssist.Hint="Normal balance"
+                          md:HintAssist.IsFloating="True"
+                          Style="{StaticResource MaterialDesignFilledComboBox}"
+                          ItemsSource="{Binding NormalBalances}"
+                          SelectedItem="{Binding NormalBalance}"
+                          Margin="0,0,0,12" />
+
+                <ComboBox md:HintAssist.Hint="Currency"
+                          md:HintAssist.IsFloating="True"
+                          Style="{StaticResource MaterialDesignFilledComboBox}"
+                          ItemsSource="{Binding Currencies}"
+                          SelectedItem="{Binding Currency}"
+                          Margin="0,0,0,16" />
+
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#D32F2F"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,8"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}" />
+
+                <Button Content="ADD ACCOUNT"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Command="{Binding CreateCommand}"
+                        HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </md:Card>
+    </Grid>
+</UserControl>

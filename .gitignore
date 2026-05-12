@@ -54,3 +54,10 @@ appsettings.*.Local.json
 !.env.example
 secrets.bin
 auth.bin
+
+## Vendor private keys MUST NEVER be committed.
+## Public keys are baked into source via VendorPublicKey.cs; the dev/ folder is
+## purely a developer convenience for the offline test keypair.
+dev/keys/*.pem
+dev/keys/*.pfx
+dev/keys/*.p12
