@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # All class libraries and tests build on Linux (faster runners, lower cost).
+  lint-libs:
+    name: Build & test libraries (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore (libraries only)
+        run: |
+          dotnet restore src/Ledger.Core/Ledger.Core.csproj
+          dotnet restore src/Ledger.Shared/Ledger.Shared.csproj
+          dotnet restore src/Ledger.Data/Ledger.Data.csproj
+          dotnet restore src/Ledger.Services/Ledger.Services.csproj
+          dotnet restore tests/Ledger.Core.Tests/Ledger.Core.Tests.csproj
+          dotnet restore tests/Ledger.Services.Tests/Ledger.Services.Tests.csproj
+
+      - name: Build
+        run: |
+          dotnet build src/Ledger.Core/Ledger.Core.csproj             --no-restore -c Release
+          dotnet build src/Ledger.Shared/Ledger.Shared.csproj         --no-restore -c Release
+          dotnet build src/Ledger.Data/Ledger.Data.csproj             --no-restore -c Release
+          dotnet build src/Ledger.Services/Ledger.Services.csproj     --no-restore -c Release
+          dotnet build tests/Ledger.Core.Tests/Ledger.Core.Tests.csproj         --no-restore -c Release
+          dotnet build tests/Ledger.Services.Tests/Ledger.Services.Tests.csproj --no-restore -c Release
+
+      - name: Test
+        run: |
+          dotnet test tests/Ledger.Core.Tests/Ledger.Core.Tests.csproj         --no-build -c Release --logger "trx;LogFileName=core.trx"
+          dotnet test tests/Ledger.Services.Tests/Ledger.Services.Tests.csproj --no-build -c Release --logger "trx;LogFileName=services.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+
+  # The WPF desktop project requires Windows.
+  build-desktop:
+    name: Build WPF desktop (Windows)
+    runs-on: windows-latest
+    needs: lint-libs
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore src/Ledger.Desktop/Ledger.Desktop.csproj
+
+      - name: Build
+        run: dotnet build src/Ledger.Desktop/Ledger.Desktop.csproj --no-restore -c Release

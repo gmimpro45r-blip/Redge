@@ -1,0 +1,56 @@
+## .NET
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userprefs
+*.cache
+*.dll
+*.pdb
+*.exe
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+Releases/
+
+## Rider / VS / VS Code
+.vs/
+.idea/
+.vscode/
+*.swp
+
+## Tooling
+.nuget/
+*.nupkg
+*.snupkg
+.dotnet/
+.config/dotnet-tools.json.bak
+
+## Test results
+TestResults/
+*.trx
+coverage*.xml
+coverage*.json
+.coverage/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## App data
+*.db
+*.db-shm
+*.db-wal
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+!.env.example
+secrets.bin
+auth.bin

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Ledger.Services</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ledger.Core\Ledger.Core.csproj" />
+    <ProjectReference Include="..\Ledger.Data\Ledger.Data.csproj" />
+    <ProjectReference Include="..\Ledger.Shared\Ledger.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

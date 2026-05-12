@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Ledger.Data</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ledger.Core\Ledger.Core.csproj" />
+    <ProjectReference Include="..\Ledger.Shared\Ledger.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- Package references will be added in milestone 3 (EF Core, Supabase). -->
+  <!-- Kept lean for now so CI can run without network during restore. -->
+
+</Project>
